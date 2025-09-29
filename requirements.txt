@@ -1,4 +1,12 @@
 streamlit
+pandas
+numpy
+scikit-learn
+xgboost
+tensorflow
+matplotlib
+seaborn
+streamlit
 scikit-learn
 xgboost
 tensorflow
