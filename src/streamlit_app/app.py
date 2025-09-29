@@ -1,29 +1,38 @@
 import streamlit as st
+import pandas as pd
 
+# --- Title ---
 st.title("Airborne Microbiome Prediction App")
 
-# Sidebar for file upload
+# --- Sidebar: File upload ---
 st.sidebar.header("Upload Data")
-uploaded_file = st.sidebar.file_uploader("Upload microbiome/environment data", type=["csv", "txt"])
+uploaded_file = st.sidebar.file_uploader("Upload CSV file", type=["csv"])
 
+# --- Sidebar: Filters (dummy values for now) ---
+location = st.sidebar.selectbox("Select location", ["City A", "City B", "City C"])
+season = st.sidebar.selectbox("Select season", ["Spring", "Summer", "Autumn", "Winter"])
+
+st.write("Selected location:", location)
+st.write("Selected season:", season)
+
+# --- Main panel ---
 if uploaded_file:
-    st.write("File uploaded:", uploaded_file.name)
+    df = pd.read_csv(uploaded_file)
+    st.subheader("Preview of uploaded data")
+    st.dataframe(df.head())
 
-st.write("This is where model predictions and visualizations will go.")
-import streamlit as st
+    # --- Predictions placeholder ---
+    st.subheader("Predictions")
+    st.write("Model predictions will appear here once data is available.")
+    for i in range(10):
+        st.write(f"- Prediction placeholder row {i+1}")
 
-st.title("Airborne Microbiome Prediction App")
+    # --- Feature Importance placeholder ---
+    st.subheader("Feature Importance")
+    st.write("Feature importance and explanations will appear here.")
+    for i in range(10):
+        st.write(f"- Feature importance placeholder {i+1}")
 
-import streamlit as st
-
-st.title("Airborne Microbiome Prediction App")
-
-st.sidebar.header("Upload Data")
-uploaded_file = st.sidebar.file_uploader("Upload microbiome/environment data", type=["csv"])
-
-if uploaded_file:
-    st.write(" File uploaded:", uploaded_file.name)
-
-st.write("This is where model predictions and visualizations will go.")
-
-
+# --- Extra space to allow scrolling ---
+for i in range(10):
+    st.write(" ")
