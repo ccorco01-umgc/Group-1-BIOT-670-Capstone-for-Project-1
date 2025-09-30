@@ -1,12 +1,14 @@
-# First test of machine learning model
+# First test of machine learning model, this is a random forest model
+
 # 1. Imports
+# Go to file and script directory
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 
 # 2. Load your Excel data
-file_path = "test.xlsx" 
+file_path = "ML-data.xlsx"
 df = pd.read_excel(file_path)
 
 # Drop datetime columns if any
@@ -21,9 +23,10 @@ categorical_columns = ["Wind Direction", "Rain Y/N", "Climate Type", "Season", "
 
 # Ensure the RH% column exists
 if "RH%" not in df.columns:
-    raise ValueError("Expected column 'RH%' not found in Excel file!")
+    raise ValueError("Expected column 'RH%' not found in Excel file")
 
-X = df.drop(columns=[target_col])
+drop_cols = [target_col, "Date", "Sample ID", "DOI", "Continent", "Country", "City/Area"]  # all non-feature cols
+X = df.drop(columns=drop_cols, errors="ignore")
 y = df[target_col]
 
 # 4. Encode categorical columns
@@ -43,11 +46,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # 6. Train Random Forest model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
-
-# Optional: Save model and encoders for later use
-joblib.dump(model, "rf_model.pkl")
-joblib.dump(le_dict, "le_dict.pkl")
-joblib.dump(le_target, "le_target.pkl")
 
 # 7. Function for user input prediction
 def predict_organism(model, le_dict, categorical_columns, le_target):
@@ -88,7 +86,7 @@ def predict_organism(model, le_dict, categorical_columns, le_target):
     # Predict
     pred = model.predict(df_input)
     pred_label = le_target.inverse_transform(pred)
-    print("Predicted organism:", pred_label[0])
+    print("Predicted microbe of highest abundance:", pred_label[0])
 
 
 predict_organism(model, le_dict, categorical_columns, le_target)
