@@ -29,7 +29,7 @@ st.title("Airborne Microbiome Predictor (North America)")
 @st.cache_data
 def load_data():
     file_path = "ML-data.xlsx"  # ensure the file is in same directory
-    df = pd.read_excel("C:/Users/class/Downloads/ML-data.xlsx")
+    df = pd.read_excel(".....ML-data.xlsx") # ENTER YOUR DIRECTORY PATH
     df.columns = df.columns.str.strip().str.replace(r"[\u200b\u00a0]", "", regex=True)
 
     numeric_columns = [
@@ -182,7 +182,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "Model Summary"
 ])
 
-
 # --- Prediction Overview Tab (Top 5 Predictions)
 with tab1:
     st.header("Predicted Dominant Organism")
@@ -252,17 +251,22 @@ with tab1:
             "Explore how predicted dominant organisms vary across environmental gradients such as "
             "temperature, humidity, or altitude. The boxplot shows the distribution of environmental "
             "values for each predicted organism."
+            "Select one or more organisms to visualize their environmental distributions. "
+            "You can also toggle to view only the top 5 most confident predictions."
         )
 
         # --- Prepare DataFrame with Predicted Labels
         df_env = df.copy()
 
         try:
-            df_env["Predicted"] = le_target.inverse_transform(clf_org.predict(df_env[features]))
-            st.success("Predicted labels successfully generated.")
+            y_pred_proba = clf_org.predict_proba(df_env[features])
+            y_pred = clf_org.classes_[np.argmax(y_pred_proba, axis=1)]
+            df_env["Predicted"] = le_target.inverse_transform(y_pred)
+            st.success("Predicted organism probabilities successfully generated.")
         except Exception as e:
-            st.warning(f"Could not generate predicted labels: {e}")
+            st.warning(f"Could not generate predictions: {e}")
             df_env["Predicted"] = "Unknown"
+            y_pred_proba = None
 
         # --- Environmental Variables to Explore
         env_options = [
@@ -278,43 +282,88 @@ with tab1:
         ]
         available_env = [col for col in env_options if col in df_env.columns]
 
-        if available_env:
+        if available_env and y_pred_proba is not None:
             selected_env = st.selectbox(
                 "Select Environmental Variable to Visualize:",
                 available_env,
                 key="predicted_env_box"
             )
 
-            # --- Create Boxplot
-            fig_env = px.box(
-                df_env,
-                x="Predicted",
-                y=selected_env,
-                color="Predicted",
-                points="all",
-                title=f"{selected_env} Distribution Across Predicted Organisms",
-                color_discrete_sequence=px.colors.qualitative.Vivid
-            )
-            fig_env.update_layout(
-                width=900,
-                height=500,
-                xaxis_title="Predicted Organism",
-                yaxis_title=selected_env,
-                showlegend=False
+            # --- Rank organisms by mean confidence
+            class_labels = le_target.inverse_transform(np.arange(y_pred_proba.shape[1]))
+            avg_confidence = y_pred_proba.mean(axis=0)
+            conf_df = pd.DataFrame({
+                "Predicted": class_labels,
+                "AvgConfidence": avg_confidence
+            }).sort_values("AvgConfidence", ascending=False)
+
+            # --- Checkbox toggle for Top 5
+            show_top5 = st.checkbox("Show only top 5 most confident organisms", value=False)
+
+            if show_top5:
+                default_selection = conf_df.head(5)["Predicted"].tolist()
+                available_selection = conf_df.head(5)["Predicted"].tolist()
+            else:
+                default_selection = conf_df.head(10)["Predicted"].tolist()
+                available_selection = conf_df["Predicted"].tolist()
+
+            # --- Multiselect for organism selection
+            selected_orgs = st.multiselect(
+                "Select Organisms to Display:",
+                options=available_selection,
+                default=default_selection,
+                key="selected_orgs_multiselect"
             )
 
-            st.plotly_chart(fig_env, use_container_width=True)
-            st.caption(
-                "Each box represents the environmental range where an organism is most frequently predicted. "
-                "Dots show individual sample values."
-            )
+            if selected_orgs:
+                df_filtered = df_env[df_env["Predicted"].isin(selected_orgs)]
+
+                # --- Create Boxplot
+                fig_env = px.box(
+                    df_filtered,
+                    x="Predicted",
+                    y=selected_env,
+                    color="Predicted",
+                    points="all",
+                    title=f"{selected_env} Distribution Across Selected Predicted Organisms",
+                    color_discrete_sequence=px.colors.qualitative.Bold
+                )
+
+                fig_env.update_layout(
+                    width=900,
+                    height=500,
+                    xaxis_title="Predicted Organism",
+                    yaxis_title=selected_env,
+                    legend_title_text="Organism"
+                )
+
+                st.plotly_chart(fig_env, use_container_width=True)
+                st.caption(
+                    "Use the toggle above to limit to the top 5 confident organisms or explore all predictions. "
+                    "Boxplots show how each organism dominates under different environmental ranges."
+                )
+
+                # --- Optional color legend / summary table
+                st.markdown("### Organism Confidence Summary")
+                st.dataframe(
+                    conf_df[conf_df["Predicted"].isin(selected_orgs)]
+                    .rename(columns={"AvgConfidence": "Mean Confidence"})
+                    .assign(**{"Mean Confidence (%)": lambda x: (x["Mean Confidence"] * 100).round(2)})
+                    [["Predicted", "Mean Confidence (%)"]]
+                    .style.highlight_max("Mean Confidence (%)", color="#cfe2f3"),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            else:
+                st.info("Select at least one organism from the dropdown to visualize.")
         else:
-            st.warning("No environmental variables available for visualization.")
+            st.warning(
+                "No environmental variables available for visualization or prediction probabilities unavailable.")
 
 
 # --- Model Evaluation
 with tab2:
-
     # Generate Predictions on Test Data
 
     y_pred = clf_org.predict(X_test_c)
