@@ -29,14 +29,14 @@ st.title("Airborne Microbiome Predictor (North America)")
 @st.cache_data
 def load_data():
     file_path = "ML-data.xlsx"  # ensure the file is in same directory
-    df = pd.read_excel("C:/ML-data.xlsx") # Attach EXCEL DATA PATH HERE
+    df = pd.read_excel("C:/Users/class/Downloads/ML-data.xlsx")
     df.columns = df.columns.str.strip().str.replace(r"[\u200b\u00a0]", "", regex=True)
 
     numeric_columns = [
         "Temperature (°C)", "Wind Speed (MPH)", "Altitude (km above sea level)",
-        "Relative Humidity (%)", "Sea salt Concentration ug/m^3",
-        "SO4 Concentration ug/m^3", "Organic Carbon Concentration ug/m^3",
-        "Dust Concentration ug/m^3", "Black Carbon Concentration ug/m^3",
+        "Relative Humidity (%)", "Sea salt Concentration (µg/m^3)",
+        "SO4 Concentration (µg/m^3)", "Organic Carbon Concentration (µg/m^3)",
+        "Dust Concentration (µg/m^3)", "Black Carbon Concentration (µg/m^3)",
         "Concentration (cfu/m^3)", "Sampling duration"
     ]
 
@@ -75,9 +75,9 @@ def train_models(df, _le_target):
     features = [
         "Rural/Urban", "Climate Type", "Wind Speed (MPH)", "Wind Direction",
         "Rain Y/N", "Relative Humidity (%)", "Sampling duration",
-        "Sea salt Concentration ug/m^3", "SO4 Concentration ug/m^3",
-        "Organic Carbon Concentration ug/m^3", "Dust Concentration ug/m^3",
-        "Black Carbon Concentration ug/m^3", "Altitude (km above sea level)",
+        "Sea salt Concentration (µg/m^3)", "SO4 Concentration (µg/m^3)",
+        "Organic Carbon Concentration (µg/m^3)", "Dust Concentration (µg/m^3)",
+        "Black Carbon Concentration (µg/m^3)", "Altitude (km above sea level)",
         "Temperature (°C)", "Concentration (cfu/m^3)"
     ]
 
@@ -141,11 +141,11 @@ user_input = pd.DataFrame({
     "Rain Y/N": [1 if rain == "Y" else 0],
     "Relative Humidity (%)": [humidity],
     "Sampling duration": [duration],
-    "Sea salt Concentration ug/m^3": [sea_salt],
-    "SO4 Concentration ug/m^3": [so4],
-    "Organic Carbon Concentration ug/m^3": [org_c],
-    "Dust Concentration ug/m^3": [dust],
-    "Black Carbon Concentration ug/m^3": [black_c],
+    "Sea salt Concentration (µg/m^3)": [sea_salt],
+    "SO4 Concentration (µg/m^3)": [so4],
+    "Organic Carbon Concentration (µg/m^3)": [org_c],
+    "Dust Concentration (µg/m^3)": [dust],
+    "Black Carbon Concentration (µg/m^3)": [black_c],
     "Altitude (km above sea level)": [altitude],
     "Temperature (°C)": [temp],
     "Concentration (cfu/m^3)": [conc]
@@ -245,29 +245,71 @@ with tab1:
     st.divider()
 
 
-    # Probability Distribution (Optional Visualization)
-    #
-    st.subheader("Prediction Confidence Distribution")
+    # Dominant Organisms per Environmental Gradient
 
-    fig_pie = px.pie(
-        df_top5,
-        names="Organism",
-        values="Probability (%)",
-        title="Prediction Confidence Breakdown",
-        color_discrete_sequence=px.colors.sequential.Blues_r
-    )
-    fig_pie.update_traces(textposition="inside", textinfo="percent+label")
-    fig_pie.update_layout(width=700, height=500)
+    with st.expander("Predicted Organisms Across Environmental Conditions", expanded=False):
+        st.caption(
+            "Explore how predicted dominant organisms vary across environmental gradients such as "
+            "temperature, humidity, or altitude. The boxplot shows the distribution of environmental "
+            "values for each predicted organism."
+        )
 
-    st.plotly_chart(fig_pie, use_container_width=True)
+        # --- Prepare DataFrame with Predicted Labels
+        df_env = df.copy()
 
-    st.caption("""
-       **Interpretation Guide:**
-       - **Bar Chart** → Ranks the top predicted organisms by confidence level.  
-       - **Pie Chart** → Visualizes confidence proportion across top organisms.  
-       - The highest confidence organism is shown above as the *predicted dominant organism*.
-       """)
+        try:
+            df_env["Predicted"] = le_target.inverse_transform(clf_org.predict(df_env[features]))
+            st.success("Predicted labels successfully generated.")
+        except Exception as e:
+            st.warning(f"Could not generate predicted labels: {e}")
+            df_env["Predicted"] = "Unknown"
 
+        # --- Environmental Variables to Explore
+        env_options = [
+            "Temperature (°C)",
+            "Relative Humidity (%)",
+            "Altitude (km above sea level)",
+            "Dust Concentration (µg/m^3)",
+            "SO4 Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)",
+            "Sea salt Concentration (µg/m^3)",
+            "Black Carbon Concentration (µg/m^3)",
+            "Wind Speed (MPH)"
+        ]
+        available_env = [col for col in env_options if col in df_env.columns]
+
+        if available_env:
+            selected_env = st.selectbox(
+                "Select Environmental Variable to Visualize:",
+                available_env,
+                key="predicted_env_box"
+            )
+
+            # --- Create Boxplot
+            fig_env = px.box(
+                df_env,
+                x="Predicted",
+                y=selected_env,
+                color="Predicted",
+                points="all",
+                title=f"{selected_env} Distribution Across Predicted Organisms",
+                color_discrete_sequence=px.colors.qualitative.Vivid
+            )
+            fig_env.update_layout(
+                width=900,
+                height=500,
+                xaxis_title="Predicted Organism",
+                yaxis_title=selected_env,
+                showlegend=False
+            )
+
+            st.plotly_chart(fig_env, use_container_width=True)
+            st.caption(
+                "Each box represents the environmental range where an organism is most frequently predicted. "
+                "Dots show individual sample values."
+            )
+        else:
+            st.warning("No environmental variables available for visualization.")
 
 
 # --- Model Evaluation
@@ -562,10 +604,10 @@ with tab4:
             "Altitude (km above sea level)",
             "Temperature (°C)",
             "Relative Humidity (%)",
-            "SO4 Concentration ug/m^3",
-            "Dust Concentration ug/m^3",
-            "Organic Carbon Concentration ug/m^3",
-            "Sea salt Concentration ug/m^3"
+            "SO4 Concentration (µg/m^3)",
+            "Dust Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)",
+            "Sea salt Concentration (µg/m^3)"
         ]
 
         available_factors = [f for f in env_factors if f in df.columns]
@@ -692,11 +734,11 @@ with tab4:
         st.caption("Examines how microbial abundance changes with varying pollutant concentrations.")
 
         pollution_cols = [
-            "Sea salt Concentration ug/m^3",
-            "SO4 Concentration ug/m^3",
-            "Organic Carbon Concentration ug/m^3",
-            "Dust Concentration ug/m^3",
-            "Black Carbon Concentration ug/m^3"
+            "Sea salt Concentration (µg/m^3)",
+            "SO4 Concentration (µg/m^3)",
+            "Organic Carbon Concentration(µg/m^3)",
+            "Dust Concentration (µg/m^3)",
+            "Black Carbon Concentration (µg/m^3)3"
         ]
         pollution_present = [p for p in pollution_cols if p in df.columns]
 
@@ -737,11 +779,11 @@ with tab4:
             "Altitude (km above sea level)",
             "Temperature (°C)",
             "Relative Humidity (%)",
-            "Dust Concentration ug/m^3",
-            "SO4 Concentration ug/m^3",
-            "Organic Carbon Concentration ug/m^3",
-            "Black Carbon Concentration ug/m^3",
-            "Sea salt Concentration ug/m^3",
+            "Dust Concentration (µg/m^3)",
+            "SO4 Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)",
+            "Black Carbon Concentration (µg/m^3)",
+            "Sea salt Concentration (µg/m^3)",
             "Shannon",
             "Simpson",
             "Richness"
@@ -781,9 +823,9 @@ with tab4:
             "Altitude (km above sea level)",
             "Temperature (°C)",
             "Relative Humidity (%)",
-            "SO4 Concentration ug/m^3",
-            "Dust Concentration ug/m^3",
-            "Organic Carbon Concentration ug/m^3"
+            "SO4 Concentration (µg/m^3)",
+            "Dust Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)"
         ]
 
         available_factors = [f for f in dominant_factors if f in df.columns]
@@ -839,10 +881,10 @@ with tab4:
             "Altitude (km above sea level)",
             "Temperature (°C)",
             "Relative Humidity (%)",
-            "SO4 Concentration ug/m^3",
-            "Dust Concentration ug/m^3",
-            "Organic Carbon Concentration ug/m^3",
-            "Sea salt Concentration ug/m^3"
+            "SO4 Concentration (µg/m^3)",
+            "Dust Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)",
+            "Sea salt Concentration (µg/m^3)"
         ]
         available_vars = [v for v in env_vars if v in df.columns]
 
@@ -1379,5 +1421,4 @@ with tab10:
                 file_name="model_metrics.csv",
                 mime="text/csv"
             )
-
 
