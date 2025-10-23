@@ -1,4 +1,3 @@
-
 # Airborne Microbiome Predictor (Group 1)
 # Compatible with Streamlit 1.50 and Altair 5.5.0
 
@@ -17,19 +16,15 @@ from sklearn.metrics import r2_score, mean_squared_error
 from scipy.spatial.distance import pdist, squareform
 from sklearn.inspection import permutation_importance
 
-
 # Streamlit Page Setup
-
 st.set_page_config(page_title="Airborne Microbiome Predictor", layout="wide")
 st.title("Airborne Microbiome Predictor (North America)")
 
-
 # Load Dataset (pre-imported Excel file)
-
 @st.cache_data
 def load_data():
     file_path = "ML-data.xlsx"  # ensure the file is in same directory
-    df = pd.read_excel(".....ML-data.xlsx") # ENTER YOUR DIRECTORY PATH
+    df = pd.read_excel("/ML-data.xlsx") 
     df.columns = df.columns.str.strip().str.replace(r"[\u200b\u00a0]", "", regex=True)
 
     numeric_columns = [
@@ -66,10 +61,7 @@ def load_data():
 
 df, le_dict, le_target = load_data()
 
-
-
 # Train Models (cached)
-
 @st.cache_resource
 def train_models(df, _le_target):
     features = [
@@ -105,13 +97,9 @@ def train_models(df, _le_target):
     metrics = {"R²": r2_val, "RMSE": rmse_val}
     return clf_org, clf_all, reg_ab, metrics, features, X_test_c, y_test_c
 
-
 clf_org, clf_all, reg_ab, metrics, features, X_test_c, y_test_c = train_models(df, _le_target=le_target)
 
-
-
 # Sidebar Scenario Controls
-
 st.sidebar.header("Scenario Controls")
 
 temp = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, 25.0)
@@ -130,9 +118,7 @@ black_c = st.sidebar.number_input("Black Carbon (µg/m³)", 0.0, 1.0, 0.01)
 conc = st.sidebar.number_input("Concentration (cfu/m³)", 0.0, 1000.0, 100.0)
 duration = st.sidebar.number_input("Sampling Duration (hrs)", 0.0, 48.0, 12.0)
 
-
 # Prepare User Input for Prediction
-
 user_input = pd.DataFrame({
     "Rural/Urban": [rural_urban],
     "Climate Type": [climate],
@@ -159,16 +145,13 @@ for col in le_dict:
 # Align columns exactly to training order
 user_input = user_input.reindex(columns=features, fill_value=0)
 
-
 # Run Predictions
-
 org_pred = clf_org.predict(user_input)
 org_label = le_target.inverse_transform(org_pred)[0]
 allergen_pred = clf_all.predict(user_input)[0]
 abundance_pred = reg_ab.predict(user_input)[0]
 
 # Tabs Layout
-
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "Prediction Overview",
     "Model Evaluation",
@@ -186,10 +169,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
 with tab1:
     st.header("Predicted Dominant Organism")
 
-
     # Main Prediction Output
-
-    st.subheader("Predicted Dominant Organism")
     st.success(f"**{org_label}**")
 
     # --- Summary Metrics
@@ -200,9 +180,7 @@ with tab1:
 
     st.divider()
 
-
     # Top 5 Predicted Organisms
-
     st.subheader("Top 5 Predicted Organisms (by Probability)")
 
     # --- Compute probabilities for all classes
@@ -238,26 +216,21 @@ with tab1:
             height=350
         )
     )
-
     st.altair_chart(bar_chart, use_container_width=True)
+    st.caption("*Shows the five most likely organisms for the given scenario, with bars reflecting predicted probability.*")
 
     st.divider()
 
-
     # Dominant Organisms per Environmental Gradient
-
     with st.expander("Predicted Organisms Across Environmental Conditions", expanded=False):
         st.caption(
             "Explore how predicted dominant organisms vary across environmental gradients such as "
             "temperature, humidity, or altitude. The boxplot shows the distribution of environmental "
-            "values for each predicted organism."
-            "Select one or more organisms to visualize their environmental distributions. "
-            "You can also toggle to view only the top 5 most confident predictions."
+            "values for each predicted organism. Select organisms or limit to the top-5 by confidence."
         )
 
         # --- Prepare DataFrame with Predicted Labels
         df_env = df.copy()
-
         try:
             y_pred_proba = clf_org.predict_proba(df_env[features])
             y_pred = clf_org.classes_[np.argmax(y_pred_proba, axis=1)]
@@ -328,7 +301,6 @@ with tab1:
                     title=f"{selected_env} Distribution Across Selected Predicted Organisms",
                     color_discrete_sequence=px.colors.qualitative.Bold
                 )
-
                 fig_env.update_layout(
                     width=900,
                     height=500,
@@ -336,12 +308,8 @@ with tab1:
                     yaxis_title=selected_env,
                     legend_title_text="Organism"
                 )
-
                 st.plotly_chart(fig_env, use_container_width=True)
-                st.caption(
-                    "Use the toggle above to limit to the top 5 confident organisms or explore all predictions. "
-                    "Boxplots show how each organism dominates under different environmental ranges."
-                )
+                st.caption("*Shows how environmental conditions vary for each predicted organism; wider boxes indicate broader environmental niches.*")
 
                 # --- Optional color legend / summary table
                 st.markdown("### Organism Confidence Summary")
@@ -354,18 +322,14 @@ with tab1:
                     use_container_width=True,
                     hide_index=True
                 )
-
             else:
                 st.info("Select at least one organism from the dropdown to visualize.")
         else:
-            st.warning(
-                "No environmental variables available for visualization or prediction probabilities unavailable.")
-
+            st.warning("No environmental variables available for visualization or prediction probabilities unavailable.")
 
 # --- Model Evaluation
 with tab2:
     # Generate Predictions on Test Data
-
     y_pred = clf_org.predict(X_test_c)
     y_true = y_test_c
 
@@ -383,9 +347,7 @@ with tab2:
     # --- Summary metric
     match_rate = df_eval["Match"].mean() * 100
 
-
     # Summary Metrics
-
     col1, col2 = st.columns(2)
     col1.metric("Prediction Agreement (%)", f"{match_rate:.1f}")
     col2.metric("R² (Abundance)", f"{metrics['R²']:.2f}")
@@ -393,9 +355,7 @@ with tab2:
     st.caption("Model performance metrics calculated on test subset.")
     st.divider()
 
-
     # Predicted vs Actual Heatmap
-
     st.subheader("Predicted vs Actual Organism Classification")
 
     # Prepare chart data
@@ -411,7 +371,7 @@ with tab2:
     chart_filtered = chart_data[
         chart_data["Actual"].isin(top_orgs) &
         chart_data["Predicted"].isin(top_orgs)
-        ]
+    ]
 
     # Create Altair layers
     base = alt.Chart(chart_filtered).encode(
@@ -443,18 +403,17 @@ with tab2:
         )
         st.altair_chart(final_chart, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
+        st.caption("*Compares model predictions to ground truth; darker diagonal cells indicate correct classifications, while off-diagonals indicate confusions between taxa.*")
 
     st.caption("""
        This chart compares predicted vs actual organisms from the test dataset.  
        - **Diagonal cells** = correct predictions  
        - **Off-diagonal cells** = misclassifications  
-       """)
+    """)
 
     st.divider()
 
-
     # Residual Analysis (Optional for Regression)
-
     with st.expander("Residual Analysis (Optional for Regression)", expanded=False):
         try:
             # Compute residuals for abundance regression model
@@ -473,15 +432,13 @@ with tab2:
 
             # Display chart in Streamlit
             st.plotly_chart(fig_resid, use_container_width=True)
-            st.caption("Helps identify bias or variance patterns in abundance predictions.")
+            st.caption("*Plots residuals against predicted values to reveal bias or heteroscedasticity; the dashed line marks zero error.*")
         except Exception as e:
             st.warning(f"Residual plot not generated: {e}")
 
     st.divider()
 
-
     # Permutation Importance (Expand for Details)
-
     with st.expander("Permutation Importance (Feature Stability Check)"):
         try:
             perm = permutation_importance(
@@ -505,6 +462,7 @@ with tab2:
                 color_continuous_scale="Blues"
             )
             st.plotly_chart(fig_perm, use_container_width=True)
+            st.caption("*Estimates feature impact by measuring performance drop when each predictor is permuted; larger bars indicate greater influence on abundance predictions.*")
         except Exception as e:
             st.warning(f"Could not compute permutation importance: {e}")
 
@@ -512,9 +470,7 @@ with tab2:
 with tab3:
     st.header("Microbial Diversity Analysis")
 
-
     # ALPHA DIVERSITY — SINGLE SAMPLE
-
     st.subheader("Alpha Diversity (Single-Sample Prediction)")
 
     if hasattr(clf_org, "predict_proba") and user_input is not None:
@@ -537,9 +493,7 @@ with tab3:
 
     st.divider()
 
-
     # ALPHA DIVERSITY — COMPUTE FOR ALL SAMPLES
-
     with st.expander("Alpha Diversity (Multi-Sample Prediction)", expanded=False):
 
         if hasattr(clf_org, "predict_proba"):
@@ -584,6 +538,7 @@ with tab3:
                 hover_data=["Sample ID"]
             )
             st.plotly_chart(fig_alpha, use_container_width=True)
+            st.caption("*Relates diversity indices across samples; points with high Shannon and Richness indicate more even and species-rich communities.*")
 
         st.divider()
 
@@ -594,9 +549,7 @@ with tab3:
         )
 
     #  BETA DIVERSITY (BRAY–CURTIS)
-
     with st.expander("Beta Diversity (Bray–Curtis Dissimilarity)"):
-
         if {"Sample ID", "Organism_encoded", "% Abundance"} <= set(df.columns):
             # --- Compute abundance matrix
             abundance_matrix = df.pivot_table(
@@ -627,25 +580,16 @@ with tab3:
             plt.xticks(rotation=90)
             plt.yticks(rotation=0)
             st.pyplot(fig)
-
-            st.caption("""
-               **Interpretation:**
-               - **Darker (purple/blue)** → More similar microbial communities  
-               - **Brighter (yellow)** → More different microbial compositions  
-               """)
+            st.caption("*Heatmap of between-sample dissimilarity; brighter cells indicate more distinct community compositions.*")
         else:
-            st.warning(
-                "Missing required columns ('Sample ID', '% Abundance', or 'Organism_encoded') for beta diversity heatmap.")
-
+            st.warning("Missing required columns ('Sample ID', '% Abundance', or 'Organism_encoded') for beta diversity heatmap.")
 
 # --- Environmental Gradients
 with tab4:
     st.header("Environmental Gradients")
     st.caption("Explore how environmental factors influence microbial diversity, prediction accuracy, and abundance shifts.")
 
-
     # 1. ALPHA DIVERSITY VS ENVIRONMENTAL GRADIENTS
-
     with st.expander("Alpha Diversity vs. Environmental Gradients", expanded=False):
         st.caption("Visualizes how predicted microbial diversity changes with environmental conditions such as altitude, temperature, or humidity.")
 
@@ -666,7 +610,7 @@ with tab4:
             selected_factor = st.selectbox(
                 "Select Environmental Factor",
                 available_factors,
-                key="env_factor_tab4"  # unique key prevents duplicate element ID error
+                key="env_factor_tab4"
             )
 
             diversity_df = df[diversity_metrics + [selected_factor]].melt(
@@ -695,6 +639,8 @@ with tab4:
             )
 
             st.altair_chart(scatter_chart + trend, use_container_width=True)
+            st.caption("*Shows how diversity indices vary along the selected environmental gradient; trend lines indicate direction and strength of association.*")
+
             st.markdown("""
             Interpretation:
             - Upward trend: Higher diversity under increasing environmental values  
@@ -706,10 +652,7 @@ with tab4:
 
         st.divider()
 
-
     # 2. ALTITUDE INFLUENCE ON PREDICTION ACCURACY
-
-
     with st.expander("Altitude Influence on Microbial Prediction Accuracy", expanded=False):
         st.caption("Assesses how well the model performs across different altitude ranges.")
 
@@ -738,19 +681,29 @@ with tab4:
         )
 
         st.altair_chart(alt_chart, use_container_width=True)
-        st.caption(
-            "Displays prediction accuracy (%) across altitude bins. Higher values indicate better model consistency.")
+        st.caption("*Displays prediction agreement across altitude bands; peaks suggest elevations where the model generalizes better.*")
 
         st.divider()
 
     # 3. PREDICTION DIVERGENCE ACROSS ENVIRONMENTAL CONDITIONS
-
     with st.expander("Prediction Divergence Across Environmental Conditions", expanded=False):
         st.caption("Compares prediction mismatches (divergence) under different environmental gradients.")
 
+        env_factors = [
+            "Altitude (km above sea level)",
+            "Temperature (°C)",
+            "Relative Humidity (%)",
+            "SO4 Concentration (µg/m^3)",
+            "Dust Concentration (µg/m^3)",
+            "Organic Carbon Concentration (µg/m^3)",
+            "Sea salt Concentration (µg/m^3)"
+        ]
         env_options = [f for f in env_factors if f in df.columns]
 
+        df_eval = df.copy()
+        df_eval["Predicted"] = le_target.inverse_transform(clf_org.predict(df[features]))
         df_eval["Divergence"] = (df_eval["Predicted"] != df_eval["Organism"]).astype(int)
+
         box_data = df_eval.melt(
             id_vars=["Divergence"],
             value_vars=env_options,
@@ -771,14 +724,11 @@ with tab4:
         )
 
         st.altair_chart(box_chart, use_container_width=True)
-        st.caption("Boxplots show how prediction mismatches vary across environmental gradients (red = divergent, blue = accurate).")
+        st.caption("*Shows how error rates distribute under different environmental ranges; red indicates mismatches and blue indicates correct predictions.*")
 
         st.divider()
 
-
     # 4. POLLUTION VS MICROBIAL ABUNDANCE
-
-
     with st.expander("Pollution vs Microbial Abundance Shifts", expanded=False):
         st.caption("Examines how microbial abundance changes with varying pollutant concentrations.")
 
@@ -812,15 +762,13 @@ with tab4:
             )
 
             st.altair_chart(chart_poll, use_container_width=True)
-            st.caption("Scatter plot shows how microbial abundance responds to pollutant levels, useful for identifying sensitive taxa.")
+            st.caption("*Illustrates abundance responses across pollutant gradients; rising patterns suggest potential sensitivity to specific pollutants.*")
         else:
             st.warning("No pollution concentration columns found in dataset.")
 
         st.divider()
 
-
     # 5. ENVIRONMENT–DIVERSITY CORRELATION MATRIX
-
     with st.expander("Environmental–Diversity Correlation Matrix", expanded=False):
         st.caption("Highlights relationships between environmental variables and alpha diversity indices.")
 
@@ -853,18 +801,18 @@ with tab4:
             )
             ax.set_title("Correlation Matrix of Environmental and Diversity Factors", fontsize=14)
             st.pyplot(fig)
-            st.caption("""
+            st.caption("*Correlations between environmental drivers and diversity indices; strong positives in red and strong negatives in blue.*")
+
+            st.markdown("""
             Interpretation:
-            - Red: Positive correlation (both increase together)
-            - Blue: Negative correlation (one increases while the other decreases)
+            - Red: Positive correlation (both increase together)  
+            - Blue: Negative correlation (one increases while the other decreases)  
             - Near 0: Weak or no relationship
             """)
         else:
             st.warning("Insufficient numeric variables available for correlation heatmap.")
 
-
     # 6. ORGANISM DOMINANCE ACROSS ENVIRONMENTAL FACTORS
-
     with st.expander("Organism Dominance Across Environmental Factors", expanded=False):
         st.caption("Displays which organisms are most abundant under different environmental gradients.")
 
@@ -906,22 +854,29 @@ with tab4:
             heatmap_fig = px.imshow(
                 pivot_df,
                 aspect="auto",
-                color_continuous_scale="YlGnBu",
+                color_continuous_scale="Viridis",
                 labels=dict(color="Mean % Abundance"),
                 title=f"Dominant Organisms Across {selected_factor} Ranges"
             )
 
-            st.plotly_chart(heatmap_fig, use_container_width=True)
-            st.caption(
-                "The heatmap shows which organisms dominate under specific environmental ranges. "
-                "Darker colors indicate higher relative abundance."
+            #  Adjust contrast and layout
+            heatmap_fig.update_coloraxes(
+                cmin=0,
+                cmax=pivot_df.values.max(),  # stretch color range
+                colorbar_title="Mean % Abundance"
             )
+            heatmap_fig.update_layout(
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                font=dict(color="black", size=12)
+            )
+
+            st.plotly_chart(heatmap_fig, use_container_width=True)
+            st.caption("*Heatmap of mean relative abundance for top organisms across environmental bins; darker cells indicate dominance in that range.*")
         else:
             st.warning("No environmental variables available for organism dominance analysis.")
 
-
     # 7. ABUNDANCE TRENDS FOR SELECTED ORGANISMS (X-AXIS SWITCHABLE)
-
     with st.expander("Abundance Trends for Selected Organisms", expanded=False):
         st.caption("Explore how organism abundance changes with different environmental gradients.")
 
@@ -975,8 +930,7 @@ with tab4:
                 )
 
                 st.altair_chart(chart, use_container_width=True)
-                st.caption(
-                    "Shows how each organism’s abundance changes continuously along the selected environmental gradient.")
+                st.caption("*Tracks abundance variation for selected taxa along the chosen gradient; points aid pattern recognition in sparse regions.*")
             else:
                 st.info("Select at least one organism to visualize its abundance trend.")
         else:
@@ -1003,9 +957,7 @@ with tab5:
         "New York": (43.0000, -75.0000)
     }
 
-
     # INTERACTIVE SAMPLING MAP
-
     if "City/Area" in df.columns:
         st.subheader("Interactive Sampling Map (U.S. Regions)")
 
@@ -1055,8 +1007,14 @@ with tab5:
                     ),
                     color=alt.Color(
                         "Altitude (km above sea level):Q",
-                        scale=alt.Scale(scheme="viridis"),
-                        legend=alt.Legend(title="Altitude (km)")
+                        scale=alt.Scale(
+                            range=[
+                                "#313695", "#4575b4", "#74add1", "#abd9e9",
+                                "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027", "#a50026"
+                            ],
+                            clamp=True
+                        ),
+                        legend=alt.Legend(title="Altitude (km)", gradientLength=200)
                     ),
                     tooltip=["City/Area", "Sample Count", "Altitude (km above sea level)"]
                 )
@@ -1064,7 +1022,7 @@ with tab5:
 
             labels = (
                 alt.Chart(df_map)
-                .mark_text(fontSize=12, dy=-10, fontWeight="bold", color="black")
+                .mark_text(fontSize=15, dy=-10, fontWeight="bold", color="black")
                 .encode(
                     longitude="Longitude:Q",
                     latitude="Latitude:Q",
@@ -1074,45 +1032,66 @@ with tab5:
 
             bubble_map = (background + bubbles + labels).interactive()
             st.altair_chart(bubble_map, use_container_width=True)
-            st.caption("🟢 Larger circles = more samples. Color scale represents mean altitude per city.")
+            st.caption("*Maps sampling density and mean altitude by location; larger circles indicate more samples and color encodes elevation.*")
 
             st.divider()
 
-
             # ALTITUDE DISTRIBUTION SCATTERPLOT
-
             with st.expander("Altitude Distribution by Location", expanded=False):
-
+                # --- Define altitude range for filter
                 min_alt = float(df_map["Altitude (km above sea level)"].min())
                 max_alt = float(df_map["Altitude (km above sea level)"].max())
+
                 selected_range = st.slider(
                     "Filter by Altitude Range (km above sea level):",
                     min_value=round(min_alt, 2),
                     max_value=round(max_alt, 2),
                     value=(round(min_alt, 2), round(max_alt, 2)),
-                    step=0.1
+                    step=0.1,
                 )
 
+                # --- Filter dataset
                 df_filtered = df_map[
                     (df_map["Altitude (km above sea level)"] >= selected_range[0]) &
                     (df_map["Altitude (km above sea level)"] <= selected_range[1])
                 ]
 
+                # --- Define vivid color scale
+                alt_color_scale = alt.Scale(
+                    range=[
+                        "#313695", "#4575b4", "#74add1", "#abd9e9",
+                        "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027", "#a50026"
+                    ],
+                    clamp=True
+                )
+
+                # --- Create scatter chart
                 scatter = (
                     alt.Chart(df_filtered)
                     .mark_circle(size=180, opacity=0.8)
                     .encode(
                         x=alt.X("City/Area:N", sort="-y", title="Location"),
                         y=alt.Y("Altitude (km above sea level):Q", title="Altitude (km, relative to sea level)"),
-                        color=alt.Color("Altitude (km above sea level):Q",
-                                        scale=alt.Scale(scheme="viridis"), legend=None),
-                        size=alt.Size("Sample Count:Q", scale=alt.Scale(range=[100, 600])),
-                        tooltip=["City/Area", "Altitude (km above sea level)", "Sample Count"]
+                        color=alt.Color(
+                            "Altitude (km above sea level):Q",
+                            scale=alt_color_scale,
+                            legend=alt.Legend(
+                                title="Altitude (km)",
+                                gradientLength=200,
+                                titleFontSize=13,
+                                labelFontSize=11
+                            )
+                        ),
+                        tooltip=[
+                            alt.Tooltip("City/Area:N", title="Location"),
+                            alt.Tooltip("Altitude (km above sea level):Q", title="Altitude (km)", format=".2f"),
+                            alt.Tooltip("Sample Count:Q", title="Samples", format=",")
+                        ]
                     )
                     .properties(
                         width=950,
                         height=450,
-                        title=f"Altitude Variation across Sampling Locations ({selected_range[0]}–{selected_range[1]} km)"
+                        title=f"Altitude Variation Across Sampling Locations ({selected_range[0]}–{selected_range[1]} km)"
                     )
                     .interactive()
                 )
@@ -1124,21 +1103,13 @@ with tab5:
                     .encode(y="y:Q")
                 )
 
+                # --- Combine and render
                 st.altair_chart(scatter + sea_level_line, use_container_width=True)
-                st.caption("🔴 Red dashed line marks sea level (0 km). Hover or zoom to explore altitude variation.")
-
-        else:
-            st.warning("No recognized cities found for mapping. Please check 'City/Area' names.")
-
-    else:
-        st.warning("Dataset does not include a 'City/Area' column.")
-
+                st.caption("*Displays altitude per location within the selected range; the red dashed rule marks sea level at 0 km.*")
 
     # ALTITUDE INFLUENCE ON MODEL PERFORMANCE
-
     st.divider()
     with st.expander("Altitude Influence on Microbial Prediction Accuracy", expanded=False):
-
         if "Altitude (km above sea level)" in df.columns and "Organism" in df.columns:
             try:
                 df_eval = df.copy()
@@ -1163,12 +1134,11 @@ with tab5:
                 )
 
                 st.altair_chart(alt_chart, use_container_width=True)
-                st.caption("Displays how model prediction accuracy varies across different altitude bands.")
+                st.caption("*Summarizes how prediction agreement varies with elevation; consistent peaks suggest altitude-specific generalization.*")
             except Exception as e:
                 st.warning(f"Could not compute altitude influence chart: {e}")
         else:
             st.info("Altitude or organism data missing — cannot compute prediction accuracy by altitude.")
-
 
 with tab6:
     st.header("Taxonomic Composition and Hierarchy")
@@ -1178,7 +1148,6 @@ with tab6:
     if {"Phylum", "Class", "Genus", "% Abundance"} <= set(df.columns):
 
         # HIERARCHICAL TREEMAP
-
         with st.expander("Hierarchical Treemap (Phylum → Class → Genus)", expanded=False):
             st.caption("Each rectangle represents a taxonomic level; area corresponds to relative abundance, and color distinguishes Phyla.")
 
@@ -1206,9 +1175,9 @@ with tab6:
             )
 
             st.plotly_chart(fig_treemap, use_container_width=True)
+            st.caption("*Shows hierarchical taxonomic structure; larger blocks denote taxa contributing more to overall relative abundance.*")
 
         # STACKED BAR CHART: TOP PHYLA BY GENUS
-
         st.divider()
         with st.expander("Stacked Bar Chart by Phylum and Genus", expanded=False):
 
@@ -1247,10 +1216,9 @@ with tab6:
             )
 
             st.plotly_chart(fig_bar, use_container_width=True)
-
+            st.caption("*Stacks mean abundance by genus within phyla to show which genera contribute most to each high-level group.*")
 
             # OPTIONAL INSIGHTS SECTION
-
             with st.expander("Interpretation Tips", expanded=False):
                 st.markdown("""
                 **How to Read These Charts:**
@@ -1323,6 +1291,7 @@ with tab7:
                     )
                 )
                 st.altair_chart(chart, use_container_width=True)
+                st.caption("*Shows how often each methodological choice appears; longer bars indicate more commonly used techniques in the dataset.*")
 
                 # --- Table
                 with st.expander(f"{col} — Percentage Table", expanded=False):
@@ -1366,6 +1335,7 @@ with tab8:
             sns.heatmap(corr, cmap="coolwarm", annot=True, fmt=".2f", ax=ax)
             ax.set_title("Correlation Heatmap of Numeric Features", fontsize=14)
             st.pyplot(fig)
+            st.caption("*Reveals linear associations among numeric variables; strong positive/negative pairs stand out for further modeling checks.*")
         else:
             st.warning("No numeric columns available for correlation heatmap.")
 
@@ -1390,6 +1360,7 @@ with tab9:
             .properties(title="Top 15 Predictive Environmental Features", width=800, height=500)
         )
         st.altair_chart(chart, use_container_width=True)
+        st.caption("*Tree-based relative importance for organism classification; larger values indicate stronger contribution to splits.*")
 
     with st.expander("Permutation Importance (Model-Agnostic)", expanded=False):
         try:
@@ -1405,6 +1376,7 @@ with tab9:
                 title="Top 15 Features by Permutation Importance"
             )
             st.plotly_chart(fig_perm, use_container_width=True)
+            st.caption("*Model-agnostic estimate of predictor influence on abundance regression; measures performance drop upon shuffling each feature.*")
         except Exception as e:
             st.warning(f"Could not calculate permutation importance: {e}")
 
@@ -1416,6 +1388,7 @@ with tab9:
             sns.heatmap(corr, cmap="vlag", center=0, annot=True, fmt=".2f", ax=ax)
             ax.set_title("Feature Correlation Heatmap (Predictors)", fontsize=14)
             st.pyplot(fig_corr)
+            st.caption("*Identifies multicollinearity among predictors; strong correlations may warrant regularization or dimensionality reduction.*")
         else:
             st.warning("No numeric predictors available.")
 
@@ -1449,6 +1422,7 @@ with tab10:
                 )
                 fig_resid.add_hline(y=0, line_dash="dash", line_color="black")
                 st.plotly_chart(fig_resid, use_container_width=True)
+                st.caption("*Residual diagnostics for abundance predictions; color encodes magnitude of error, and the dashed line indicates zero residual.*")
             else:
                 st.info("Residual data unavailable.")
         except Exception as e:
@@ -1470,4 +1444,3 @@ with tab10:
                 file_name="model_metrics.csv",
                 mime="text/csv"
             )
-
